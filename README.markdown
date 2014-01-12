@@ -67,3 +67,10 @@ Use https://opia.api.translink.com.au/v1/content/swaggerui/index.aspx to find ou
   }
 }
 ```
+
+
+## How does it work? 
+`Your app`  **>** `JSON` **>** `OpiaProxy.Network/Location/Travel/Version API` **>** `OpiaProxy.APIClient` **>** `OpiaProxy.ProxyCache` **>** opia.TransLink
+
+`Your app`  **<** `JSON` **<** `OpiaProxy.Network/Location/Travel/Version API` **<** `OpiaProxy.APIClient` **<** `OpiaProxy.ProxyCache` **<** opia.TransLink
+The ProxyCache creates a hash of your request and tries to find it in the cache, if it exists it's read and returned directly, else the APIClient makes a call to Translink and the results entered into the cache.
