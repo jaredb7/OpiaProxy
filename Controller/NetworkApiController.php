@@ -4,7 +4,7 @@ App::uses('NetworkApi', 'OpiaProxy.Model');
 class NetworkApiController extends OpiaProxyAppController
 {
     /**
-     * @var $location_api_client NetworkApi
+     * @var $network_api_client NetworkApi
      */
     private $network_api_client;
 

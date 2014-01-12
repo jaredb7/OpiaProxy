@@ -1,16 +1,19 @@
 <?php
-define('CAKE_OPIA_VER','0.0.5');
+define('CAKE_OPIA_VER','0.5.5');
+
 /**
  * OPIA API ACCESS CREDENTIALS
  */
-Configure::write('OpiaProxy.opiaLogin', "");
-Configure::write('OpiaProxy.opiaPassword', "");
-Configure::write('OpiaProxy.api_key', "special_key"); //Maybe for some future OPIA implementation
+Configure::write('OpiaProxy.opiaLogin', ""); //Your login as supplied by Translink
+Configure::write('OpiaProxy.opiaPassword', ""); //Your password as supplied by Translink
+Configure::write('OpiaProxy.api_key', "special_key"); //Maybe for some future OPIA API implementation, this is sent in the header by default
 
 /**
  * Proxy storage type, either :: file|mysql|sqlite
+ * TODO: Redis
  */
-Configure::write('OpiaProxy.perist_type', "sqlite");
+Configure::write('OpiaProxy.perist_type', "file");
+
 
 /**
  * CACHE TTL'S (Specified values are in seconds)
