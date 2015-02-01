@@ -15,6 +15,8 @@ class VersionApiController extends OpiaProxyAppController
 
         $this->viewPath = 'api_response';
         $this->view = "base_api_response";
+
+        $this->Auth->allow();
     }
 
     /**

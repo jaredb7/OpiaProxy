@@ -48,7 +48,7 @@ class TravelApi
             $queryParams['timeMode'] = 0;
         }
         if ($at != null) {
-            $queryParams['at'] = $this->apiClient->toQueryValue($at);
+            $queryParams['at'] = date('Y/m/d H:i:s', strtotime($this->apiClient->toQueryValue($at)));
         } else {
             $queryParams['at'] = date('Y/m/d H:i:s');
         }
@@ -84,6 +84,7 @@ class TravelApi
         if (!isset($body)) {
             $body = null;
         }
+
         $response = $this->apiClient->callAPI($resourcePath, $method, $queryParams, $body, $headerParams);
 
 

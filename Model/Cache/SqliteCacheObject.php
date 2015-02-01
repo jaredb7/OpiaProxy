@@ -142,4 +142,62 @@ class SqliteCacheObject extends ProxyCache implements ICacheStorage
             return $message;
         }
     }
+
+    /**
+     * Purges the entire cache
+     * @return bool|void
+     */
+    public function purge()
+    {
+        //Get all the results from the db
+        $statement = $this->_db->prepare('DELETE FROM cache WHERE 1=1;');
+        $result = $statement->execute();
+
+        if ($result) {
+            $message = "PURGE: Finished deleting old cache entries. Deleted (" . $this->_db->changes() . ") entries.";
+            CakeLog::write('info', $message, 'opia-proxy');
+
+            return $message;
+        } else {
+            $message = "PURGE: Something went wrong.";
+            CakeLog::write('warning', $message, 'opia-proxy');
+
+            return $message;
+        }
+    }
+
+    /**
+     * Returns a list of items in the cache
+     * @return mixed|void
+     */
+    public function list_cache()
+    {
+        $statement = $this->_db->prepare('SELECT * FROM cache WHERE 1=1;');
+        $result = $statement->execute();
+//        $results = $result->fetchArray(SQLITE3_ASSOC);
+
+        $ttl_expiry = time() - $this->_cacheTTL;
+        $return_list = array();
+
+        while ($results = $result->fetchArray(SQLITE3_ASSOC)) {
+            $expired = false;
+            $ttl = $results['created'];
+
+            if ($ttl < $ttl_expiry) {
+                $expired = true;
+            }
+
+            $return_list[] = array(
+                'item_name' => $results['request_hash'],
+                'contents' => $results['request_response'],
+                'location' => $results['request_hash'],
+                'ttl' => $ttl,
+                'expired' => $expired
+            );
+
+        }
+
+        return $return_list;
+    }
+
 }

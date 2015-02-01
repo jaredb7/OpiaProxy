@@ -2,6 +2,7 @@
 App::uses('Folder', 'Utility');
 
 App::uses('ProxyCache', 'OpiaProxy.Model/Cache');
+
 class FileCacheObject extends ProxyCache implements ICacheStorage
 {
 
@@ -93,32 +94,96 @@ class FileCacheObject extends ProxyCache implements ICacheStorage
     {
         //look at all the files in the cache directory and delete ones older than ttl age
         $dir = new Folder($this->cache_file_location);
-        $files = $dir->find('.*'.$this->cache_file_extension);
+        $files = $dir->find('.*' . $this->cache_file_extension);
         $non_deleted = array();
         $deleted = 0;
         foreach ($files as $file) {
             $file_mod_time = filemtime($this->cache_file_location . DS . $file);
             //If the file delta between current time and the file modification time is greater than the ttl, then remove it
             if (abs(time() - $file_mod_time) > $this->_cacheTTL) {
-               if(!$this->del($file)){
-                   $non_deleted[] = $file;
-               }else{
-                   $deleted++;
-               }
+                if (!$this->del($file)) {
+                    $non_deleted[] = $file;
+                } else {
+                    $deleted++;
+                }
             }
         }
-        if(empty($non_deleted)){
+        if (empty($non_deleted)) {
             $message = "Finished deleting old cache entries. Deleted (" . $deleted . ") entries.";
-            CakeLog::write('info',$message, 'opia-proxy');
+            CakeLog::write('info', $message, 'opia-proxy');
 
             return $message;
-        }else{
+        } else {
             $message = "Finished deleting old cache entries. ";
-            $message .=  "Failed to remove: " . json_encode($non_deleted);
-            CakeLog::write('info', "Finished deleting old cache entries.", 'opia-proxy');
+            $message .= "Failed to remove: " . json_encode($non_deleted);
+            CakeLog::write('info', $message, 'opia-proxy');
 
             return $message;
         }
+    }
+
+    /**
+     * Purges the entire cache
+     * @return bool|void
+     */
+    public function purge()
+    {
+        //look at all the files in the cache directory and delete ones older than ttl age
+        $dir = new Folder($this->cache_file_location);
+        $files = $dir->find('.*' . $this->cache_file_extension);
+        $non_deleted = array();
+        $deleted = 0;
+        foreach ($files as $file) {
+            //If the file delta between current time and the file modification time is greater than the ttl, then remove it
+            if (!$this->del($file)) {
+                $non_deleted[] = $file;
+            } else {
+                $deleted++;
+            }
+        }
+        if (empty($non_deleted)) {
+            $message = "PURGE: Finished deleting old cache entries. Deleted (" . $deleted . ") entries.";
+            CakeLog::write('info', $message, 'opia-proxy');
+
+            return $message;
+        } else {
+            $message = "PURGE: Finished deleting old cache entries. ";
+            $message .= "Failed to remove: " . json_encode($non_deleted);
+            CakeLog::write('info', $message, 'opia-proxy');
+
+            return $message;
+        }
+    }
+
+    /**
+     * Returns a list of all the items in the cache
+     * @return mixed|void
+     */
+    public function list_cache()
+    {
+        //look at all the files in the cache directory and delete ones older than ttl age
+        $dir = new Folder($this->cache_file_location);
+        $files = $dir->find('.*' . $this->cache_file_extension);
+
+        $return_list = array();
+
+        foreach ($files as $file) {
+            $expired = false;
+            $file_mod_time = filemtime($this->cache_file_location . DS . $file);
+            //If the file delta between current time and the file modification time is greater than the ttl, then remove it
+            if (abs(time() - $file_mod_time) > $this->_cacheTTL) {
+                $expired = true;
+            }
+
+            $return_list[] = array(
+                'item_name' => $file,
+                'contents' => file_get_contents($this->cache_file_location . DS . $file),
+                'location' => $this->cache_file_location . DS . $file,
+                'ttl' => abs(time() - $file_mod_time),
+                'expired' => $expired
+            );
+        }
+        return $return_list;
     }
 
     /**

@@ -24,6 +24,7 @@ class LocationApi
      * @param $maxResults int Maximum matches to return. Hard limit of 50 (required)
      * @throws Exception on missing argument
      * @return ResolveInputResult
+     * @depreciated
      */
     public function resolve($input, $filter, $maxResults)
     {
@@ -60,6 +61,54 @@ class LocationApi
 
         return $responseObject;
     }
+
+
+    /**
+     * suggest
+     * Suggests landmarks, stops, addresses, etc from free-form text
+     * If an exact match is found it will be returned immediately and other possible alternatives will be ignored. Otherwise, returns up to maxResults suggestions, ranked in descending order of relevance.
+     * @param $input string Free form text to resolve (required)
+     * @param $filter string Types of locations to limit search to, or 'None' for no filtering. None = 0, Landmark = 1, StreetAddress = 2, Stop = 3, GeographicPosition = 4 (required)
+     * @param $maxResults int Maximum matches to return. Hard limit of 50 (required)
+     * @throws Exception on missing argument
+     * @return SuggestResult
+     */
+    public function suggest($input, $filter, $maxResults)
+    {
+        //parse inputs
+        $resourcePath = "/location/rest/suggest";
+        $resourcePath = str_replace("{format}", "json", $resourcePath);
+        $method = "GET";
+        $queryParams = array();
+        $headerParams = array();
+
+        if ($input != null) {
+            $queryParams['input'] = $this->apiClient->toQueryValue($input);
+        }
+        if ($filter != null) {
+            $queryParams['filter'] = $this->apiClient->toQueryValue($filter);
+        }else{
+            $queryParams['filter'] = 0;
+        }
+        if ($maxResults != null) {
+            $queryParams['maxResults'] = $this->apiClient->toQueryValue($maxResults);
+        }
+        //make the API Call
+        if (!isset($body)) {
+            $body = null;
+        }
+        $response = $this->apiClient->callAPI($resourcePath, $method, $queryParams, $body, $headerParams);
+
+
+        if (!$response) {
+            return null;
+        }
+
+        $responseObject = $this->apiClient->deserialize($response, 'SuggestResult');
+
+        return $responseObject;
+    }
+
 
     /**
      * stops-at-landmark
@@ -162,6 +211,7 @@ class LocationApi
         if ($ids != null) {
             $queryParams['ids'] = $this->apiClient->toQueryValue($ids);
         }
+
         //make the API Call
         if (!isset($body)) {
             $body = null;

@@ -1,6 +1,7 @@
 <?php
 App::uses('MysqlCacheModel', 'OpiaProxy.Model/Cache');
 App::uses('ProxyCache', 'OpiaProxy.Model/Cache');
+
 class MysqlCacheObject extends ProxyCache implements ICacheStorage
 {
     private $_db;
@@ -102,4 +103,57 @@ class MysqlCacheObject extends ProxyCache implements ICacheStorage
             return $message;
         }
     }
+
+    /**
+     * Purges the entire cache
+     * @return bool|void
+     */
+    public function purge()
+    {
+        $result = $this->_db->deleteAll(array('created >' => -1));
+
+        if ($result) {
+            $message = "PURGE: Finished deleting old cache entries. Deleted (" . $this->_db->getAffectedRows() . ") entries.";
+            CakeLog::write('info', $message, 'opia-proxy');
+
+            return $message;
+        } else {
+            $message = "PURGE: Something went wrong.";
+            CakeLog::write('warning', $message, 'opia-proxy');
+
+            return $message;
+        }
+    }
+
+    /**
+     * Returns a list of all the items in the cache
+     * @return mixed|void
+     */
+    public function list_cache()
+    {
+        $result = $this->_db->find('all');
+
+        $return_list = array();
+        $ttl_expiry = time() - $this->_cacheTTL;
+
+        foreach ($result as $i => $cache_item) {
+            $expired = false;
+            $ttl = $cache_item[$this->_db->name]['created'];
+
+            if ($ttl < $ttl_expiry) {
+                $expired = true;
+            }
+
+            $return_list[] = array(
+                'item_name' => $cache_item[$this->_db->name]['request_hash'],
+                'contents' =>  $cache_item[$this->_db->name]['request_response'],
+                'location' => $cache_item[$this->_db->name]['request_hash'],
+                'ttl' => $ttl,
+                'expired' => $expired
+            );
+        }
+
+        return $return_list;
+    }
+
 }

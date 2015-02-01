@@ -15,6 +15,8 @@ class TravelApiController extends OpiaProxyAppController
 
         $this->viewPath = 'api_response';
         $this->view = "base_api_response";
+
+        $this->Auth->allow();
     }
 
     /**
@@ -26,6 +28,10 @@ class TravelApiController extends OpiaProxyAppController
     {
         $fromLocationId = $toLocationId = $timeMode = $at = $vehicleTypes = $walkSpeed = $maximumWalkingDistanceM = $serviceTypes = $fareTypes = null;
         extract($this->request->query);
+
+        $passedArg = explode("/", $this->passedArgs[0]);
+        $fromLocationId = $passedArg[0];
+        $toLocationId = $passedArg[1];
 
         $obj = $this->travel_api_client->plan($fromLocationId, $toLocationId, $timeMode, $at, $vehicleTypes, $walkSpeed, $maximumWalkingDistanceM, $serviceTypes, $fareTypes);
 
@@ -41,6 +47,10 @@ class TravelApiController extends OpiaProxyAppController
     {
         $fromLocationId = $toLocationId = $timeMode = $at = $vehicleTypes = $walkSpeed = $maximumWalkingDistanceM = $serviceTypes = $fareTypes = null;
         extract($this->request->query);
+
+        $passedArg = explode("/", $this->passedArgs[0]);
+        $fromLocationId = $passedArg[0];
+        $toLocationId = $passedArg[1];
 
         $obj = $this->travel_api_client->plan_url($fromLocationId, $toLocationId, $timeMode, $at, $vehicleTypes, $walkSpeed, $maximumWalkingDistanceM, $serviceTypes, $fareTypes);
 

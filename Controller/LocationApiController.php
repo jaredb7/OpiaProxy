@@ -14,12 +14,16 @@ class LocationApiController extends OpiaProxyAppController
 
         $this->viewPath = 'api_response';
         $this->view = "base_api_response";
+
+        $this->Auth->allow();
     }
 
     /**
      * resolve
      * Suggests landmarks, stops, addresses, etc from free-form text
      * @return ResolveInputResult
+     *
+     * @deprecated
      */
     public function resolve()
     {
@@ -28,6 +32,22 @@ class LocationApiController extends OpiaProxyAppController
 
         //resolve input
         $obj = $this->location_api_client->resolve($input, $filter, $maxResults);
+
+        $this->set('response', $obj);
+    }
+
+    /**
+     * suggest
+     * Suggests landmarks, stops, addresses, etc from free-form text
+     * @return SuggestResult
+     */
+    public function suggest()
+    {
+        $input = $filter = $maxResults = null;
+        extract($this->request->query);
+
+        //resolve input
+        $obj = $this->location_api_client->suggest($input, $filter, $maxResults);
 
         $this->set('response', $obj);
     }

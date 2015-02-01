@@ -1,6 +1,7 @@
 <?php
-App::uses('HttpSocket', 'Network/Http');
-App::uses('HttpSocketResponse', 'Network/Http');
+//App::uses('HttpSocket', 'Network/Http');
+//App::uses('HttpSocketResponse', 'Network/Http');
+//App::uses('OpiaSocket', 'OpiaProxy.Lib');
 
 /**
  * APIClient.php
@@ -30,6 +31,29 @@ class APIClient
     public static $PUT = "PUT";
     public static $DELETE = "DELETE";
 
+    //Connection crypto type
+    private static $crypto = "tls";
+
+
+    /**
+     * Some default options for curl
+     */
+    public static $DEFAULT_CURL_OPTS = array(
+        CURLOPT_SSLVERSION => 1,
+        CURLOPT_CONNECTTIMEOUT => 1,
+        CURLOPT_RETURNTRANSFER => TRUE,
+        CURLOPT_TIMEOUT => 5, // maximum number of seconds to allow cURL functions to execute
+        CURLOPT_USERAGENT => 'CakePHP OPIA Proxy',
+        CURLOPT_HTTPHEADER => array("Content-Type: application/json; charset=utf-8", "Accept: application/json, text/javascript, */*; q=0.01"),
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_CIPHER_LIST => 'TLSv1',
+    );
+
+    const HEADER_SEPARATOR = ';';
+    const HTTP_GET = 'GET';
+    const HTTP_POST = 'POST';
+
     /**
      * Some variables for modifying caching
      */
@@ -37,7 +61,7 @@ class APIClient
     public $cache_ttl = 0;
 
     /**
-     * @var HttpSocket
+     * @var OpiaSocket
      */
     private $_httpClient;
 
@@ -51,7 +75,7 @@ class APIClient
     /**
      * @var ProxyCache
      */
-    private $_proxy_client;
+    public $_proxy_client;
 
     /**
      * Constructor
@@ -62,6 +86,8 @@ class APIClient
         $this->_apiServer = Configure::read('OpiaProxy.api_endpoint.Base');
 
         $this->cache_ttl = Configure::read('OpiaProxy.cache_ttl.data');
+
+        $this->no_cache = Configure::read('OpiaProxy.cache.no_cache');
 
         $this->setup_user_agent();
         //Setup the proxy
@@ -75,7 +101,9 @@ class APIClient
      */
     public function setup_user_agent()
     {
-        self::$USER_AGENT = "Mozilla/5.0 (CakeOpia/" . CAKE_OPIA_VER . " PHP/" . PHP_VERSION . " (CakeOpia))";
+        self::$USER_AGENT = "Mozilla/5.0 (CakeOpia/" . CAKE_OPIA_VER . "; PHPD/" . PHP_VERSION . ") (CakeOpia)";
+        //	Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0
+        self::$DEFAULT_CURL_OPTS[CURLOPT_USERAGENT] = self::$USER_AGENT;
     }
 
     /**
@@ -105,13 +133,126 @@ class APIClient
      */
     public function setup_http_socket()
     {
-        $this->_httpClient = new HttpSocket(array('timeout' => 5));
-        //Configure Authentication
-        $this->_httpClient->configAuth('Basic',
-            Configure::read('OpiaProxy.opiaLogin'),
-            Configure::read('OpiaProxy.opiaPassword')
-        );
+
+//        $this->_httpClient = new HttpSocket(array('timeout' => 1));
+//
+//        //Configure Authentication
+//        $this->_httpClient->configAuth('Basic',
+//            Configure::read('OpiaProxy.opiaLogin'),
+//            Configure::read('OpiaProxy.opiaPassword')
+//        );
+
+
     }
+
+
+//    public function callAPI_old($resourcePath, $method, $queryParams, $postData, $headerParams)
+//    {
+//        //Final url is the base path + resource path(location|network|travel|version)
+//        $url = $this->_apiServer . $resourcePath;
+//        //Build query string
+//        if (!empty($queryParams)) {
+//            $url = ($url . '?' . http_build_query($queryParams));
+//        }
+//
+//        //Parse the url
+//        $url_parse = parse_url($url);
+//
+//        //Build Request array for HttpSocket
+//        $request = array(
+//            'method' => $method,
+//            'uri' => array(
+//                'scheme' => $url_parse['scheme'],
+//                'host' => $url_parse['host'],
+//                'path' => $url_parse['path'],
+//            ),
+//            'header' => array(
+//                'Host' => $url_parse['host'],
+//                'User-Agent' => self::$USER_AGENT,
+//                'Content-type' => 'application/json',
+//            ),
+//        );
+//
+//        if (array_key_exists('query', $url_parse)) {
+//            $request['uri']['query'] = $url_parse['query'];
+//        }
+//
+//        # Allow API key from $headerParams to override default
+//        $added_api_key = false;
+//        if ($headerParams != null) {
+//            foreach ($headerParams as $key => $val) {
+//                $request['header'][$key] = $val;
+//                if ($key == 'api_key') {
+//                    $added_api_key = true;
+//                }
+//            }
+//        }
+//        //Add default api key
+//        if (!$added_api_key) {
+//            $request['header']['api_key'] = $this->_apiKey;
+//        }
+//        //If we have post data,
+//        if (is_object($postData) || is_array($postData)) {
+//            $postData = json_encode(self::sanitizeForSerialization($postData));
+//            $request['body'] = $postData;
+//        }
+//
+//
+//        //TODO cache completion
+//        //If no cache entry exists for this request then... do a direct request, else fetch the cache file
+//        if (!$this->_proxy_client->exists($request)) {
+//
+//            goto opia_direct;
+//
+//            opia_direct: {
+//                CakeLog::write('info', 'Fetching from OPIA API: ' . json_encode($url_parse), 'opia-proxy');
+//
+//                $response = $this->_httpClient->request($request);
+//                //Save the request and result to the cache if the response is ok
+//                if ($response->code == 200 && $this->no_cache == false) {
+//                    $this->_proxy_client->save($request, $response->body);
+//                }
+//            }
+//        } else {
+//            CakeLog::write('info', 'Fetching from cache: HASH[' . $this->_proxy_client->hash_request($request) . '] :: REQUEST[' . json_encode($url_parse) . ']', 'opia-proxy');
+//
+//            //Read the entry for this request
+//            $cache_data = $this->_proxy_client->read($request);
+//
+//            if (empty($cache_data) || $cache_data == null) {
+//                CakeLog::write('info', 'Fetching from cache: Cache result data was null... going direct', 'opia-proxy');
+//
+//                goto opia_direct;
+//            } else {
+//                //Build the http response object,
+//                $response = new HttpSocketResponse();
+//                $response->code = 200;
+//                $response->body = $cache_data;
+//            }
+//        }
+//
+//
+//        // Handle the response
+//        if ($response->code == 0) {
+//            throw new Exception("TIMEOUT: API call to " . $url . " took more than 1s to return");
+//        } else if ($response->code == 200) {
+//            $data = json_decode($response->body);
+//        } else if ($response->code == 400) {
+//            throw new Exception(json_decode($response->body) . " " . $url . " : response code: " . $response->code);
+//        } else if ($response->code == 401) {
+//            throw new Exception("Unauthorized API request to " . $url . " : Invalid Login Credentials");
+//        } else if ($response->code == 403) {
+//            throw new Exception("Quota exceeded for this method, or a security error prevented completion of your (successfully authorized) request : " . $url);
+//        } else if ($response->code == 404) {
+//            $data = null;
+//        } else if ($response->code == 500) {
+//            throw new Exception("Internal server error, response code: " . $response->code);
+//        } else {
+//            throw new Exception("Can't connect to the api: " . $url . " : response code: " . $response->code);
+//        }
+//
+//        return $data;
+//    }
 
     /**
      * Makes call to the specified path/API
@@ -125,63 +266,95 @@ class APIClient
      */
     public function callAPI($resourcePath, $method, $queryParams, $postData, $headerParams)
     {
+        $headers = array();
+        $request = array();
+
+        # Allow API key from $headerParams to override default
+        $added_api_key = False;
+        if ($headerParams != null) {
+            foreach ($headerParams as $key => $val) {
+                $headers[] = "$key: $val";
+                if ($key == 'api_key') {
+                    $added_api_key = True;
+                }
+            }
+        }
+        if (!$added_api_key) {
+            $headers[] = "api_key: " . $this->_apiKey;
+        }
+
+        if (is_object($postData) or is_array($postData)) {
+            $postData = json_encode(self::sanitizeForSerialization($postData));
+        }
+
         //Final url is the base path + resource path(location|network|travel|version)
         $url = $this->_apiServer . $resourcePath;
-        //Build query string
+
+        //Init curl
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_TIMEOUT, 1);
+        // return the result on success, rather than just TRUE
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+        //merge new headers
+        if (!empty($headers)) {
+//            self::$DEFAULT_CURL_OPTS[CURLOPT_HTTPHEADER] = array_merge($headers, self::$DEFAULT_CURL_OPTS[CURLOPT_HTTPHEADER]);
+        }
+
+        //Set curl options
+        foreach (self::$DEFAULT_CURL_OPTS as $opt => $opt_data) {
+            curl_setopt($curl, $opt, $opt_data);
+        }
+
+        //Set HTTP Basic authentication
+        //Your credentials goes here
+        curl_setopt($curl, CURLOPT_USERPWD, Configure::read('OpiaProxy.opiaLogin') . ":" . Configure::read('OpiaProxy.opiaPassword'));
+
         if (!empty($queryParams)) {
             $url = ($url . '?' . http_build_query($queryParams));
         }
 
-        //Parse the url
+        if ($method == self::$POST) {
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
+        } else if ($method == self::$PUT) {
+            $json_data = json_encode($postData);
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
+        } else if ($method == self::$DELETE) {
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
+        } else if ($method != self::$GET) {
+            throw new Exception('Method ' . $method . ' is not recognized.');
+        }
+        curl_setopt($curl, CURLOPT_URL, $url);
+
+        //Collect request info
+        $request['headers'] = self::$DEFAULT_CURL_OPTS[CURLOPT_HTTPHEADER];
+        $request['url'] = $url;
         $url_parse = parse_url($url);
 
-        //Build Request array for HttpSocket
-        $request = array(
-            'method' => $method,
-            'uri' => array(
-                'scheme' => $url_parse['scheme'],
-                'host' => $url_parse['host'],
-                'path' => $url_parse['path'],
-            ),
-            'header' => array(
-                'Host' => $url_parse['host'],
-                'User-Agent' => self::$USER_AGENT,
-                'Content-type' => 'application/json',
-            ),
-        );
-
-        if (array_key_exists('query', $url_parse)) {
-            $request['uri']['query'] = $url_parse['query'];
-        }
-
-        # Allow API key from $headerParams to override default
-        $added_api_key = false;
-        if ($headerParams != null) {
-            foreach ($headerParams as $key => $val) {
-                $request['header'][$key] = $val;
-                if ($key == 'api_key') {
-                    $added_api_key = true;
-                }
-            }
-        }
-        //Add default api key
-        if (!$added_api_key) {
-            $request['header']['api_key'] = $this->_apiKey;
-        }
-        //If we have post data,
-        if (is_object($postData) || is_array($postData)) {
-            $postData = json_encode(self::sanitizeForSerialization($postData));
-            $request['body'] = $postData;
-        }
+        //Built response variables
+        $response = null;
+        $response_info = array('http_code' => 999);
 
         //TODO cache completion
+        //If no cache entry exists for this request then... do a direct request, else fetch the cache file
         if (!$this->_proxy_client->exists($request)) {
-            CakeLog::write('info', 'Fetching from OPIA API: ' . json_encode($url_parse), 'opia-proxy');
 
-            $response = $this->_httpClient->request($request);
-            //Save the request and result to the cache if the response is ok
-            if ($response->code == 200 && $this->no_cache == false) {
-                $this->_proxy_client->save($request, $response->body);
+            goto opia_direct;
+
+            opia_direct: {
+                CakeLog::write('info', 'Fetching from OPIA API: ' . json_encode($url_parse), 'opia-proxy');
+
+                // Make the request
+                $response = curl_exec($curl);
+                $response_info = curl_getinfo($curl);
+
+                //Save the request and result to the cache if the response is ok
+                if ($response_info['http_code'] == 200 && $this->no_cache == false) {
+                    $this->_proxy_client->save($request, $response);
+                }
             }
         } else {
             CakeLog::write('info', 'Fetching from cache: HASH[' . $this->_proxy_client->hash_request($request) . '] :: REQUEST[' . json_encode($url_parse) . ']', 'opia-proxy');
@@ -189,102 +362,45 @@ class APIClient
             //Read the entry for this request
             $cache_data = $this->_proxy_client->read($request);
 
-            //Build the http response object,
-            $response = new HttpSocketResponse();
-            $response->code = 200;
-            $response->body = $cache_data;
+            if (empty($cache_data) || $cache_data == null) {
+                CakeLog::write('info', 'Fetching from cache: Cache result data was null... going direct', 'opia-proxy');
+
+                goto opia_direct;
+            } else {
+                $response = $cache_data;
+                $response_info['http_code'] = 200;
+            }
         }
 
-        // Handle the response
-        if ($response->code == 0) {
-            throw new Exception("TIMEOUT: API call to " . $url . " took more than 5s to return");
-        } else if ($response->code == 200) {
-            $data = json_decode($response->body);
-        } else if ($response->code == 400) {
-            throw new Exception(json_decode($response->body) . " " . $url . " : response code: " . $response->code);
-        } else if ($response->code == 401) {
+
+        //handle response
+        if ($response_info['http_code'] == 0) {
+            CakeLog::write('warning', "TIMEOUT: API call to " . $url . " took more than 1s to return", 'opia-proxy');
+
+            throw new Exception("TIMEOUT: API call to " . $url . " took more than 1s to return");
+        } else if ($response_info['http_code'] == 200) {
+            $data = json_decode($response);
+        } else if ($response_info['http_code'] == 400) {
+            CakeLog::write('warning', json_decode($response) . " " . $url . " : response code: " . $response_info['http_code'], 'opia-proxy');
+            throw new Exception(json_decode($response) . " " . $url . " : response code: " . $response_info['http_code']);
+        } else if ($response_info['http_code'] == 401) {
+            CakeLog::write('warning', "Unauthorized API request to " . $url . " : Invalid Login Credentials", 'opia-proxy');
             throw new Exception("Unauthorized API request to " . $url . " : Invalid Login Credentials");
-        } else if ($response->code == 403) {
+        } else if ($response_info['http_code'] == 403) {
+            CakeLog::write('warning', "Quota exceeded for this method, or a security error prevented completion of your (successfully authorized) request : " . $url, 'opia-proxy');
             throw new Exception("Quota exceeded for this method, or a security error prevented completion of your (successfully authorized) request : " . $url);
-        } else if ($response->code == 404) {
+        } else if ($response_info['http_code'] == 404) {
             $data = null;
-        } else if ($response->code == 500) {
-            throw new Exception("Internal server error, response code: " . $response->code);
+        } else if ($response_info['http_code'] == 500) {
+            CakeLog::write('warning', "Internal server error, response code: " . $response_info['http_code'], 'opia-proxy');
+            throw new Exception("Internal server error, response code: " . $response_info['http_code']);
         } else {
-            throw new Exception("Can't connect to the api: " . $url . " : response code: " . $response->code);
+            CakeLog::write('warning', "Can't connect to the api: " . $url . " : response code: " . $response_info['http_code'], 'opia-proxy');
+            throw new Exception("Can't connect to the api: " . $url . " : response code: " . $response_info['http_code']);
         }
 
         return $data;
     }
-
-//    public function callAPI_old(){
-//        $headers = array();
-//        $headers[] = "Content-type: application/json";
-//
-//        # Allow API key from $headerParams to override default
-//        $added_api_key = False;
-//        if ($headerParams != null) {
-//            foreach ($headerParams as $key => $val) {
-//                $headers[] = "$key: $val";
-//                if ($key == 'api_key') {
-//                    $added_api_key = True;
-//                }
-//            }
-//        }
-//        if (!$added_api_key) {
-//            $headers[] = "api_key: " . $this->_apiKey;
-//        }
-//
-//        if (is_object($postData) or is_array($postData)) {
-//            $postData = json_encode(self::sanitizeForSerialization($postData));
-//        }
-//
-//        $url = $this->_apiServer . $resourcePath;
-//
-//        $curl = curl_init();
-//        curl_setopt($curl, CURLOPT_TIMEOUT, 5);
-//        // return the result on success, rather than just TRUE
-//        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-//        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-//
-//        if (!empty($queryParams)) {
-//            $url = ($url . '?' . http_build_query($queryParams));
-//        }
-//
-//        if ($method == self::$POST) {
-//            curl_setopt($curl, CURLOPT_POST, true);
-//            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-//        } else if ($method == self::$PUT) {
-//            $json_data = json_encode($postData);
-//            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
-//            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-//        } else if ($method == self::$DELETE) {
-//            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-//            curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-//        } else if ($method != self::$GET) {
-//            throw new Exception('Method ' . $method . ' is not recognized.');
-//        }
-//        curl_setopt($curl, CURLOPT_URL, $url);
-//
-//        // Make the request
-//        $response = curl_exec($curl);
-//        $response_info = curl_getinfo($curl);
-//        if ($response_info['http_code'] == 0) {
-//            throw new Exception("TIMEOUT: api call to " . $url .
-//            " took more than 5s to return");
-//        } else if ($response_info['http_code'] == 200) {
-//            $data = json_decode($response);
-//        } else if ($response_info['http_code'] == 401) {
-//            throw new Exception("Unauthorized API request to " . $url .
-//            ": " . json_decode($response)->message);
-//        } else if ($response_info['http_code'] == 404) {
-//            $data = null;
-//        } else {
-//            throw new Exception("Can't connect to the api: " . $url .
-//            " response code: " .
-//            $response_info['http_code']);
-//        }
-//    }
 
 
     /**

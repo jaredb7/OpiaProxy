@@ -2,6 +2,12 @@
 interface ICacheStorage
 {
     /**
+     * Lists all the items currently in the cache
+     * @return mixed
+     */
+    public function list_cache();
+
+    /**
      * Save variable in memory storage
      *
      * @param string $key - key
@@ -37,4 +43,10 @@ interface ICacheStorage
      * @return boolean
      */
     public function del_old();
+
+    /**
+     * Purges the entire cache
+     * @return boolean Return true on success, or false on error
+     */
+    public function purge();
 }

@@ -19,6 +19,8 @@ Router::connect('/:plugin/network/:action', array('controller' => 'network_api')
 /**
  * TRAVEL API
  */
+Router::connect('/:plugin/travel/plan/**', array('controller' => 'travel_api', 'action' => 'plan'));
+Router::connect('/:plugin/travel/plan-url/**', array('controller' => 'travel_api', 'action' => 'plan_url'));
 Router::connect('/:plugin/travel/:action', array('controller' => 'travel_api'));
 
 
